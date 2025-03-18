@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  api-forwarder:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Or whatever your Dockerfile is named
+    environment:
+      API_SERVER_URL: http://api-server:8000/api  # Replace with your API URL
+      MSSQL_SERVER: your_mssql_server
+      MSSQL_DATABASE: your_mssql_database
+      MSSQL_USER: your_mssql_user
+      MSSQL_PASSWORD: your_mssql_password
+    depends_on:
+      - api-server
+      - mssql-server #if you have a mssql server container
+  api-server:
+    image: your_api_server_image # Replace with your API server image
+    ports:
+      - "8000:8000"
+  mssql-server: #if you have a mssql server container
+    image: mcr.microsoft.com/mssql/server:2022-latest #or your preferred version
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrongPassword!" #Change me
+    ports:
+      - "1433:1433"

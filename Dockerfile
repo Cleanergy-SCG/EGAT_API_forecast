@@ -9,24 +9,21 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install necessary drivers for MS SQL Server
+RUN apt-get update && apt-get install -y wget apt-transport-https gnupg
+
+RUN wget https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add -
+
+RUN wget https://packages.microsoft.com/config/debian/11/prod.list -O /etc/apt/sources.list.d/mssql-release.list
+
+RUN apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql17
+
+# Install necessary drivers for MS SQL Server
 RUN apt-get update && apt-get install -y \
     unixodbc-dev \
     && rm -rf /var/lib/apt/lists/*
-
-# Set environment variables for SQL Server (modify as needed)
-# ENV MSSQL_SERVER="your_server"
-# ENV MSSQL_DATABASE="your_database"
-# ENV MSSQL_USER="your_user"
-# ENV MSSQL_PASSWORD="your_password"
 
 # Copy the application code
 COPY . .
 
 # Create output directory with write permissions
-RUN mkdir -p /app/output_directory && chmod -R 777 /app/output_directory
-
-# Expose FastAPI default port
-EXPOSE 8000
-
-# Run FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "18901"]
+CMD ["python", "api_forward_data.py"]
