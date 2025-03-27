@@ -5,6 +5,9 @@ import os
 import pyodbc
 import json
 from enum import Enum
+from datetime import datetime, timedelta
+
+
 
 EGAT_BASE_URL = "https://faas.egat.co.th/"
 
@@ -19,32 +22,54 @@ headers = {
     "Content-Type": "application/json"
 }
 
-conn_str = (
-    r'DRIVER={SQL Server};'
-    r'SERVER=172.29.23.180;'
-    r'DATABASE=PEA_meter_data;'
-    r'UID=postsavp;'
-    r'PWD=Clean@100923;'
-)
-
-
 # conn_str = (
-#     r'DRIVER={ODBC Driver 17 for SQL Server};'
+#     r'DRIVER={SQL Server};'
 #     r'SERVER=172.29.23.180;'
 #     r'DATABASE=PEA_meter_data;'
 #     r'UID=postsavp;'
 #     r'PWD=Clean@100923;'
 # )
 
+
+conn_str = (
+    r'DRIVER={ODBC Driver 17 for SQL Server};'
+    r'SERVER=172.29.23.180;'
+    r'DATABASE=PEA_meter_data;'
+    r'UID=postsavp;'
+    r'PWD=Clean@100923;'
+)
+key_mapping = {
+    "global_horizontal_irradiation": "global_horizontal_irradiation",
+    "pv_module_temperature": "temperature_pv_module",
+    "ambient_temperature": "temperature",
+    "wind_speed_at_ground": "wind_speed_ground",
+    "wind_direction_at_hub_height": "wind_direction",
+    "global_horizontal_irradiation_01_w_per_m2": "global_horizontal_irradiation",
+    "global_horizontal_irradiation_02_w_per_m2": "global_horizontal_irradiation",
+    "pv_module_temperature_01_c": "temperature_pv_module",
+    "ambient_temperature_01_c": "temperature",
+    "ambient_temperature_02_c": "temperature",
+    "wind_speed_at_ground_01_m_per_s": "wind_speed_ground",
+    "wind_direction_at_hub_height_01_degree": "wind_direction"
+}
+
+
+
+
 def make_weather_template(datetime:str,weathertype:str,point:str,status:WeatherStatus,value:float,plantcode:str):
-    return {
+    mapping_key = key_mapping.get(weathertype, weathertype)
+    raw_data =  {
         "datetime": datetime,
-        "weathertype": weathertype,
+        "weathertype": mapping_key,
         "point": point,
         "status": status.value,  # Use .value to store the string
         "value": value,
         "plantcode": plantcode
     }
+    print("--------")
+    print(raw_data,weathertype,mapping_key)
+    print("--------")
+    return raw_data
     
 
 def get_upload_server_config(agg_ca):
@@ -130,19 +155,22 @@ def get_upload_server_config(agg_ca):
             template = dict(zip(columns, row))
             data_output.append(template)
 
+            dt = datetime.strptime(template["Datetime"], "%d/%m/%Y %H:%M:%S")
+            iso_format = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
             #add actual gen data
-            response_actual_gen["datetime"] = template["Datetime"]
+            response_actual_gen["datetime"] = iso_format
             response_actual_gen["value"] = template["total_power_mw"]
             total_response_actual_gen["data"].append(response_actual_gen)
 
             #add actual weather data
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"global_horizontal_irradiation_01_w_per_m2","01",WeatherStatus.Productive,template["global_horizontal_irradiation_01_w_per_m2"],"SKK7-N"))
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"global_horizontal_irradiation_02_w_per_m2","02",WeatherStatus.Productive,template["global_horizontal_irradiation_02_w_per_m2"],"SKK7-N"))
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"ambient_temperature_01_c","01",WeatherStatus.Productive,template["ambient_temperature_01_c"],"SKK7-N"))
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"ambient_temperature_02_c","02",WeatherStatus.Productive,template["ambient_temperature_02_c"],"SKK7-N"))
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"pv_module_temperature_01_c","01",WeatherStatus.Productive,template["pv_module_temperature_01_c"],"SKK7-N"))
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"wind_speed_at_ground_01_m_per_s","01",WeatherStatus.Productive,template["wind_speed_at_ground_01_m_per_s"],"SKK7-N"))
-            total_response_actual_weather["data"].append(make_weather_template(template["Datetime"],"wind_direction_at_hub_height_01_degree","01",WeatherStatus.Productive,template["wind_direction_at_hub_height_01_degree"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"global_horizontal_irradiation_01_w_per_m2","01",WeatherStatus.Productive,template["global_horizontal_irradiation_01_w_per_m2"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"global_horizontal_irradiation_02_w_per_m2","02",WeatherStatus.Productive,template["global_horizontal_irradiation_02_w_per_m2"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"ambient_temperature_01_c","01",WeatherStatus.Productive,template["ambient_temperature_01_c"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"ambient_temperature_02_c","02",WeatherStatus.Productive,template["ambient_temperature_02_c"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"pv_module_temperature_01_c","01",WeatherStatus.Productive,template["pv_module_temperature_01_c"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"wind_speed_at_ground_01_m_per_s","01",WeatherStatus.Productive,template["wind_speed_at_ground_01_m_per_s"],"SKK7-N"))
+            total_response_actual_weather["data"].append(make_weather_template(iso_format,"wind_direction_at_hub_height_01_degree","01",WeatherStatus.Productive,template["wind_direction_at_hub_height_01_degree"],"SKK7-N"))
             
             break
 
