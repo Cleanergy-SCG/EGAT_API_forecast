@@ -7,6 +7,16 @@ import json
 from enum import Enum
 from datetime import datetime, timedelta
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+logger = logging.getLogger(__name__)
+
 
 
 EGAT_BASE_URL = "https://faas.egat.co.th/"
@@ -22,18 +32,10 @@ headers = {
     "Content-Type": "application/json"
 }
 
-# conn_str = (
-#     r'DRIVER={SQL Server};'
-#     r'SERVER=172.29.23.180;'
-#     r'DATABASE=PEA_meter_data;'
-#     r'UID=postsavp;'
-#     r'PWD=Clean@100923;'
-# )
-
 
 conn_str = (
     r'DRIVER={ODBC Driver 17 for SQL Server};'
-    r'SERVER=172.29.23.180;'
+    r'SERVER=20.212.208.119;'
     r'DATABASE=PEA_meter_data;'
     r'UID=postsavp;'
     r'PWD=Clean@100923;'
@@ -66,9 +68,8 @@ def make_weather_template(datetime:str,weathertype:str,point:str,status:WeatherS
         "value": value,
         "plantcode": plantcode
     }
-    print("--------")
-    print(raw_data,weathertype,mapping_key)
-    print("--------")
+    # logger.info(f"{raw_data},{weathertype},{mapping_key}")
+    
     return raw_data
     
 
@@ -173,8 +174,7 @@ def get_upload_server_config(agg_ca):
             total_response_actual_weather["data"].append(make_weather_template(iso_format,"wind_direction_at_hub_height_01_degree","01",WeatherStatus.Productive,template["wind_direction_at_hub_height_01_degree"],"SKK7-N"))
             
             # break
-        # print(total_response_actual_gen)
-        # print(data_output)
+        
 
 
         sql = """WITH workingtime AS (
@@ -240,10 +240,10 @@ def get_upload_server_config(agg_ca):
             total_response_actual_gen["data"][index]["activepercentage"] = raw_activepercentage[index]
 
         conn.commit()
-        print(total_response_actual_gen)
-        print(total_response_actual_weather)
+        logger.info(f"{total_response_actual_gen}")
+        logger.info(f"{total_response_actual_weather}")
     except pyodbc.Error as e:
-        print("Error:", e)
+        logger.error(f"Error:{e}")
 
     finally:
         # Close the cursor and connection
@@ -259,64 +259,62 @@ def forward_gen_data_to_EGAT(query_data):
     #     # response = requests.post(url, json=data, headers=headers)
     #     response = requests.post("http://localhost:8000/egat_test", json=query_data)
     #     response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-    #     print("API response:", response.json(),response) # or response.text
+    #     logger.info("API response:", response.json(),response) # or response.text
     # except requests.exceptions.RequestException as e:
-    #     print(f"Error forwarding query to API: {e}")
+    #     logger.error(f"Error forwarding query to API: {e}")
 
     #real server
     try:
         # response = requests.post(url, json=data, headers=headers)
         response = requests.post(f"{EGAT_BASE_URL}api/qas/actualgen/", json=query_data, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        print("API response:", response.json(),response) # or response.text
+        logger.info(f"API response: {response.json()},{response}") # or response.text
     except requests.exceptions.RequestException as e:
-        print(f"Error forwarding query to API: {e}")
+        logger.error(f"Error forwarding query to API: {e}")
 
 def forward_weather_data_to_EGAT(query_data):
     # try:
     #     # response = requests.post(url, json=data, headers=headers)
     #     response = requests.post(f"http://localhost:8000/egat_test", json=query_data)
     #     response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-    #     print("API response:", response.json(),response) # or response.text
+    #     logger.info("API response:", response.json(),response) # or response.text
     # except requests.exceptions.RequestException as e:
-    #     print(f"Error forwarding query to API: {e}")
+    #     logger.error(f"Error forwarding query to API: {e}")
 
     #real server
     try:
         # response = requests.post(url, json=data, headers=headers)
         response = requests.post(f"{EGAT_BASE_URL}api/qas/actualweather/", json=query_data, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        print("API response:", response.json(),response) # or response.text
+        logger.info(f"API response: {response.json()},{response}") # or response.text
     except requests.exceptions.RequestException as e:
-        print(f"Error forwarding query to API: {e}")
+        logger.error(f"Error forwarding query to API: {e}")
 
 
 # 949999990006
 def job():
-    print("Running job...")
+    logger.info("Running job...")
     try:
         total_response_actual_gen,total_response_actuat_weather = get_upload_server_config("949999990006")
-        print("config_result")
+        logger.info("config_result")
         forward_gen_data_to_EGAT(total_response_actual_gen)
         forward_weather_data_to_EGAT(total_response_actuat_weather)
-        print("Job finished.")
+        logger.info("Job finished.")
     except Exception as e:
-        print("Job not pass",e)
+        logger.error(f"Job not pass{e}")
 
 # Schedule the job to run every 15 minutes
 schedule.every(15).minutes.do(job)
 
 if __name__ == "__main__":
-    # query_data = get_upload_server_config("949999990006")
-    # print(type(query_data))
-    # json_str = json.dumps(query_data)
-    # forward_query_to_api(json_str)
-    # print("config_result")
-    total_response_actual_gen,total_response_actuat_weather = get_upload_server_config("949999990006")
-    print("config_result")
-    forward_gen_data_to_EGAT(total_response_actual_gen)
-    forward_weather_data_to_EGAT(total_response_actuat_weather)
-    print("Scheduler started. Running every 15 minutes.")
+    try:
+        total_response_actual_gen,total_response_actuat_weather = get_upload_server_config("949999990006")
+        logger.info("config_result")
+        forward_gen_data_to_EGAT(total_response_actual_gen)
+        forward_weather_data_to_EGAT(total_response_actuat_weather)
+        logger.info("Scheduler started. Running every 15 minutes.")
+    except Exception as e:
+        logger.error(f"Job not pass{e}")
     while True:
         schedule.run_pending()
         time.sleep(1)
