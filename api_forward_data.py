@@ -153,12 +153,19 @@ def get_upload_server_config(agg_ca):
                 "datetime": "",
                 "value": 0.0,
                 "plantcode": "SKK7-N",
-                "status": "p",
+                "status": "P",
                 "activepercentage": 0
             }
 
             dt = datetime.strptime(template["Datetime"], "%d/%m/%Y %H:%M:%S")
             iso_format = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            try:
+                if template["total_power_mw"] <= 0:
+                    response_actual_gen["status"] = "NP"
+                elif template["total_power_mw"] == None:
+                    response_actual_gen["status"] = "E"
+            except:
+                pass
 
             #add actual gen data
             response_actual_gen["datetime"] = iso_format
@@ -266,7 +273,7 @@ def forward_gen_data_to_EGAT(query_data):
     #real server
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{EGAT_BASE_URL}api/qas/actualgen/", json=query_data, headers=headers)
+        response = requests.post(f"{EGAT_BASE_URL}api/actualgen/", json=query_data, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         logger.info(f"API response: {response.json()},{response}") # or response.text
     except requests.exceptions.RequestException as e:
@@ -284,7 +291,7 @@ def forward_weather_data_to_EGAT(query_data):
     #real server
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{EGAT_BASE_URL}api/qas/actualweather/", json=query_data, headers=headers)
+        response = requests.post(f"{EGAT_BASE_URL}api/actualweather/", json=query_data, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         logger.info(f"API response: {response.json()},{response}") # or response.text
     except requests.exceptions.RequestException as e:

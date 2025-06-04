@@ -149,7 +149,7 @@ def get_upload_server_config(agg_ca):
             "status": "p",
             "activepercentage": 0
         }
-        total_response_actual_weather = {"data":[]}
+        total_response_actual_weather = {"data":[],"hello":[]}
         
         for row in cursor.fetchall():   
             template = dict(zip(columns, row))
