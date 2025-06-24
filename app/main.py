@@ -12,6 +12,8 @@ import json
 import time
 from enum import Enum
 import requests
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 
 logging.basicConfig(
@@ -37,6 +39,8 @@ class CustomLoggingMiddleware(BaseHTTPMiddleware):
 
 
 load_dotenv()
+scheduler = BackgroundScheduler()
+
 
 app = FastAPI()
 app.add_middleware(CustomLoggingMiddleware)
@@ -290,8 +294,8 @@ def get_upload_server_config(agg_ca):
             total_response_actual_gen["data"][index]["activepercentage"] = raw_activepercentage[index]
 
         conn.commit()
-        logger.info(f"{total_response_actual_gen}")
-        logger.info(f"{total_response_actual_weather}")
+        # logger.info(f"{total_response_actual_gen}")
+        # logger.info(f"{total_response_actual_weather}")
     except pyodbc.Error as e:
         logger.error(f"Error:{e}")
 
@@ -320,7 +324,9 @@ def forward_weather_data_to_EGAT(query_data):
         # response = requests.post(url, json=data, headers=headers)
         response = requests.post(f"{EGAT_BASE_URL}api/actualweather/", json=query_data, headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-        logger.info(f"API response: {response.json()},{response}") # or response.text
+        # logger.info(f"API response: {response.json()},{response}") # or response.text
+        logger.info(f"API status: {response.status_code}, body preview: {str(response.text)[:200]}")
+
     except requests.exceptions.RequestException as e:
         logger.error(f"Error forwarding query to API: {e}")
 
@@ -350,10 +356,11 @@ def run_scheduler():
     schedule.every(15).minutes.do(job)  # Change interval as needed
     while True:
         schedule.run_pending()
-        time.sleep(1)
+        time.sleep(300)
 
 # --- FastAPI startup event: starts background scheduler ---
 @app.on_event("startup")
 def startup_event():
-    thread = threading.Thread(target=run_scheduler, daemon=True)
-    thread.start()
+    scheduler.add_job(job, 'cron', minute='0,15,30,45')
+    scheduler.start()
+    logger.info("Scheduler started, will run at 0,15,30,45 minutes every hour.")
