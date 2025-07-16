@@ -107,7 +107,7 @@ def get_upload_server_config(agg_ca):
                         INNER JOIN [EDMI].[dbo].[tblDevices] dv ON mtp.[Code] = dv.[SerialNumber]
                         INNER JOIN [EDMI].[dbo].[tblsiteinfo] sif ON sif.[SiteId] = dv.[SiteId]
                         WHERE SerialNumber = 251980953
-                        AND Date_M BETWEEN DATEADD(d,-5,GETDATE()) AND GETDATE()
+                        AND Date_M BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
                         --ORDER BY Datetime ASC
                 ) AS total_power
 
@@ -130,7 +130,7 @@ def get_upload_server_config(agg_ca):
                         --, SUM(CASE WHEN devId = '1000000051508962' THEN [wind_direction] END) AS 'wind_direction_at_hub_height_02_degree'  -- เปลี่ยนชื่อตรงจุดวัด / ไม่ได้เก็บค่า
                     FROM [scgcehuawei].[dbo].[getDevRealKpiEM]  
                     WHERE [devId] IN ('1000000034241641', '1000000051508962') 
-                        AND Datetime  BETWEEN DATEADD(d,-5,GETDATE()) AND GETDATE()
+                        AND Datetime  BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
                         AND (SUBSTRING(CONVERT(VARCHAR,Datetime,20),15,2) = '00'
                             OR SUBSTRING(CONVERT(VARCHAR,Datetime,20),15,2) = '15'
                             OR SUBSTRING(CONVERT(VARCHAR,Datetime,20),15,2) = '30'
@@ -196,7 +196,7 @@ def get_upload_server_config(agg_ca):
                 INNER JOIN [EDMI].[dbo].[mapProjectCode] t4 ON t4.plantCode_huawei COLLATE Thai_CI_AS = t3.plantCode COLLATE Thai_CI_AS
             WHERE
                 t0.devId != '1000000033963259'
-                AND t0.datetime BETWEEN DATEADD(d,-5,GETDATE()) AND GETDATE()
+                AND t0.datetime BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
                 AND t3.plantCode = 'NE=34233551'
             GROUP BY
                 DATEADD(MINUTE, DATEDIFF(MINUTE, 0, t0.datetime) / 15 * 15, 0),
@@ -215,7 +215,7 @@ def get_upload_server_config(agg_ca):
             WHERE
                 t0.devId != '1000000033963259'
                 AND inverter_state NOT IN (512, 513, 514)
-                AND t0.datetime BETWEEN DATEADD(d,-5,GETDATE()) AND GETDATE()
+                AND t0.datetime BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
                 AND t3.plantCode = 'NE=34233551'
             GROUP BY
                 DATEADD(MINUTE, DATEDIFF(MINUTE, 0, t0.datetime) / 15 * 15, 0),
@@ -241,10 +241,30 @@ def get_upload_server_config(agg_ca):
         raw_activepercentage = []
         for row in cursor.fetchall():   
             template = dict(zip(columns, row))
-            raw_activepercentage.append(template['AF'])
+            raw_activepercentage.append({
+                "time": template['time'],  # your CTE outputs `interval_time` AS [time]
+                "AF": template['AF']
+            })
 
-        for index in range(0,len(total_response_actual_gen["data"])):
-            total_response_actual_gen["data"][index]["activepercentage"] = raw_activepercentage[index]
+        # Make AF lookup dict
+        af_lookup = {}
+        for item in raw_activepercentage:
+            # Example: convert SQL datetime to same format as iso_format
+            dt = item["time"]
+            if isinstance(dt, str):
+                dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")  # adjust to actual format
+            iso_format = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+            af_lookup[iso_format] = item["AF"]
+
+        for record in total_response_actual_gen["data"]:
+            ts = record["datetime"]
+            if ts in af_lookup:
+                record["activepercentage"] = af_lookup[ts]
+            else:
+                record["activepercentage"] = 0  # or 0 or keep original
+        
+        # for index in range(0,len(total_response_actual_gen["data"])):
+        #     total_response_actual_gen["data"][index]["activepercentage"] = raw_activepercentage[index]
 
         conn.commit()
         logger.info(f"{total_response_actual_gen}")
@@ -280,6 +300,9 @@ def forward_gen_data_to_EGAT(query_data):
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Error forwarding query to API: {e}")
+        if e.response is not None:
+            logger.error(f"Status code: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
 
 def forward_weather_data_to_EGAT(query_data):
     # try:
@@ -300,21 +323,34 @@ def forward_weather_data_to_EGAT(query_data):
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Error forwarding query to API: {e}")
+        if e.response is not None:
+            logger.error(f"Status code: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text}")
 
 
 # 949999990006
 def job():
     logger.info("Running job...")
     try:
-        total_response_actual_gen,total_response_actuat_weather = get_upload_server_config("949999990006")
-        logger.info("config_result")
+        result = get_upload_server_config("949999990006")
+        logger.info(f"Config result: {result}")
+        
+        if not result or len(result) < 2:
+            logger.error(f"Unexpected config result: {result}")
+            return
+        
+        total_response_actual_gen, total_response_actuat_weather = result
+        
         forward_gen_data_to_EGAT(total_response_actual_gen)
         forward_weather_data_to_EGAT(total_response_actuat_weather)
+        
         logger.info("Job finished.")
     except Exception as e:
-        logger.error(f"Job not pass{e}")
+        logger.error(f"Job not pass: {e}")
 
 # Schedule the job to run every 15 minutes
+# result = get_upload_server_config("949999990006")
+# logger.info(f"Config result: {result}")
 schedule.every(15).minutes.do(job)
 
 if __name__ == "__main__":

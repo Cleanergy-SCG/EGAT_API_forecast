@@ -1,0 +1,13 @@
+[Unit]
+Description=EGAT_GET_SERVICE
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/scgce/EGAT_API_forecast/get_forecast_data_from_EGAT/egat_get_prod_data.py
+WorkingDirectory=/home/scgce/EGAT_API_forecast/get_forecast_data_from_EGAT
+Restart=always
+RestartSec=5
+User=scgce
+
+[Install]
+WantedBy=multi-user.target

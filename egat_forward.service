@@ -1,0 +1,13 @@
+[Unit]
+Description=PV Data Forwarding Scheduler
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /home/scgce/EGAT_API_forecast/api_forward_data.py
+WorkingDirectory=/home/scgce/EGAT_API_forecast
+Restart=always
+RestartSec=5
+User=scgce
+
+[Install]
+WantedBy=multi-user.target
