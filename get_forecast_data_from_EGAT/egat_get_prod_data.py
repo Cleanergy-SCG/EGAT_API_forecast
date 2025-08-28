@@ -11,8 +11,8 @@ def get_egat_forecast(plant, starttime, endtime, auth_token, cookie_value):
         "endtime": endtime
     }
     headers = {
-        "Authorization": auth_token,
-        "Cookie": f"cookiesession1={cookie_value}"
+        "Authorization": auth_token
+        # "Cookie": f"cookiesession1={cookie_value}"
     }
     
     response = requests.get(url, headers=headers, params=params)
@@ -25,22 +25,24 @@ def get_egat_forecast(plant, starttime, endtime, auth_token, cookie_value):
 
 # Example usage:
 plant = "SKK7-N"
-starttime = "2025-6-25 00:00"
-endtime = "2025-7-18 00:00"
-# starttime = datetime.strftime(datetime.now(), "%Y-%m-%d")
-# endtime = (datetime.now() + timedelta(days=3)).date()
+# starttime = "2025-6-25 00:00"
+# endtime = "2025-7-18 00:00"
+starttime = datetime.strftime(datetime.now(), "%Y-%m-%d")
+endtime = (datetime.now() + timedelta(days=3)).date()
+# starttime = '2025-07-21'
+# endtime = '2025-07-24'
 auth_token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NzI1ODUzLCJpYXQiOjE3NDE1MjU4NTMsImp0aSI6IjAxNzM2MWViYjhhNDQxY2FhYTZiM2NiMTE4MzA1ZWE3IiwidXNlcl9pZCI6MTR9.7D_x66pyassRwq1yYkIv7P8C-6_V1-QNg_0_OduMkqw"  # Replace with actual token
 cookie_value = "678B2BAAE552B9CE39BE1F8E306C89DD"
-
+print( starttime, endtime)
 forecast_data = get_egat_forecast(plant, starttime, endtime, auth_token, cookie_value)
 
 # if forecast_data:
 #     print(forecast_data)
-print(len(forecast_data['data']))
-for element in forecast_data['data']:
-    # print(element[])
-    if element['intraday'] != None:
-        print(element)
+# print(len(forecast_data['data']))
+# for element in forecast_data['data']:
+#     # print(element[])
+#     if element['intraday'] != None:
+#         print(element)
 
 # exit()
 conn_a = pyodbc.connect(
@@ -118,6 +120,8 @@ for i, element in enumerate(forecast_data['data']):
     # Optional batch commit
     if i % batch_size == 0:
         conn_a.commit()
+
+    time.sleep(0.1)
 
 # Final commit and close
 conn_a.commit()

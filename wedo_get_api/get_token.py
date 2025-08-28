@@ -1,14 +1,11 @@
 import requests
-import schedule
 import time
 import os
 import pyodbc
 import json
 from enum import Enum
 from datetime import datetime, timedelta
-
 import logging
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -18,20 +15,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
-EGAT_BASE_URL = "https://faas.egat.co.th/"
+WEDO_BASE_ENDPOINT="https://nlp.wedolabs.net/scgdofcst/"
+headers = {
+    # "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NzI1ODUzLCJpYXQiOjE3NDE1MjU4NTMsImp0aSI6IjAxNzM2MWViYjhhNDQxY2FhYTZiM2NiMTE4MzA1ZWE3IiwidXNlcl9pZCI6MTR9.7D_x66pyassRwq1yYkIv7P8C-6_V1-QNg_0_OduMkqw",  # Your token with "Bearer " prefix
+    "Content-Type": "application/json"
+}
 
 class WeatherStatus(Enum):
     Productive = "P"
     Stop = "S"
     Error = "E"
     NotProvide = "NP"
-
-headers = {
-    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NzI1ODUzLCJpYXQiOjE3NDE1MjU4NTMsImp0aSI6IjAxNzM2MWViYjhhNDQxY2FhYTZiM2NiMTE4MzA1ZWE3IiwidXNlcl9pZCI6MTR9.7D_x66pyassRwq1yYkIv7P8C-6_V1-QNg_0_OduMkqw",  # Your token with "Bearer " prefix
-    "Content-Type": "application/json"
-}
-
 
 conn_str = (
     r'DRIVER={ODBC Driver 17 for SQL Server};'
@@ -267,8 +261,8 @@ def get_upload_server_config(agg_ca):
         #     total_response_actual_gen["data"][index]["activepercentage"] = raw_activepercentage[index]
 
         conn.commit()
-        logger.info(f"{total_response_actual_gen}")
-        logger.info(f"{total_response_actual_weather}")
+        # logger.info(f"{total_response_actual_gen}")
+        # logger.info(f"{total_response_actual_weather}")
     except pyodbc.Error as e:
         logger.error(f"Error:{e}")
 
@@ -276,27 +270,19 @@ def get_upload_server_config(agg_ca):
         # Close the cursor and connection
         cursor.close()
         conn.close()
-    return total_response_actual_gen,total_response_actual_weather
+    return total_response_actual_gen["data"],total_response_actual_weather["data"]
 
-# API server URL (replace with your actual API URL)
-API_SERVER_URL = os.environ.get("API_SERVER_URL", "http://localhost:8000/egat_test")
-
-def forward_gen_data_to_EGAT(query_data):
-    # try:
-    #     # response = requests.post(url, json=data, headers=headers)
-    #     response = requests.post("http://localhost:8000/egat_test", json=query_data)
-    #     response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-    #     logger.info("API response:", response.json(),response) # or response.text
-    # except requests.exceptions.RequestException as e:
-    #     logger.error(f"Error forwarding query to API: {e}")
-
-    #real server
+def get_token_wedo(query_data):
     try:
-        # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{EGAT_BASE_URL}api/actualgen/", json=query_data, headers=headers)
+        
+        response = requests.post(f"{WEDO_BASE_ENDPOINT}token", data=query_data)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
         logger.info(f"API status: {response.status_code}, body preview: {str(response.text)[:200]}")
+        # print(response.text)
+        result = json.loads(response.text)
+        # print()
+        return result
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Error forwarding query to API: {e}")
@@ -304,62 +290,60 @@ def forward_gen_data_to_EGAT(query_data):
             logger.error(f"Status code: {e.response.status_code}")
             logger.error(f"Response body: {e.response.text}")
 
-def forward_weather_data_to_EGAT(query_data):
-    # try:
-    #     # response = requests.post(url, json=data, headers=headers)
-    #     response = requests.post(f"http://localhost:8000/egat_test", json=query_data)
-    #     response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
-    #     logger.info("API response:", response.json(),response) # or response.text
-    # except requests.exceptions.RequestException as e:
-    #     logger.error(f"Error forwarding query to API: {e}")
+data = {
+    "username":"user_cleanergy",
+    "password":"9@f1x*IF*J}*J:x"
+}
+token = get_token_wedo(data)
+# print(token['access_token'])
 
-    #real server
+def forward_weather_data_to_WEDO(query_data,token):
+    headers = {
+        "Authorization": "Bearer "+str(token['access_token']),  # Your token with "Bearer " prefix
+        "Content-Type": "application/json"
+    }
+    # print(headers)
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{EGAT_BASE_URL}api/actualweather/", json=query_data, headers=headers)
+        response = requests.post(f"{WEDO_BASE_ENDPOINT}actualweather", json=(query_data), headers=headers)
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
-        logger.info(f"API status: {response.status_code}, body preview: {str(response.text)[:200]}")
+        logger.info(f"[forward_weather_data_to_WEDO] API status: {response.status_code},")# body preview: {str(response.text)[:200]}")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error forwarding query to API: {e}")
+        if e.response is not None:
+            logger.error(f"Status code: {e.response.status_code}")
+            # logger.error(f"Response body: {e.response.text}")
+
+def forward_gen_data_to_WEDO(query_data,token):
+    headers = {
+        "Authorization": "Bearer "+str(token['access_token']),  # Your token with "Bearer " prefix
+        "Content-Type": "application/json"
+    }
+    try:
+        # response = requests.post(url, json=data, headers=headers)
+        response = requests.post(f"{WEDO_BASE_ENDPOINT}actualgen", json=(query_data), headers=headers)
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        # logger.info(f"API response: {response.json()},{response}") # or response.text
+        logger.info(f"[forward_gen_data_to_WEDO] API status: {response.status_code},")# body preview: {str(response.text)[:200]}")
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Error forwarding query to API: {e}")
         if e.response is not None:
             logger.error(f"Status code: {e.response.status_code}")
             logger.error(f"Response body: {e.response.text}")
-
-
-# 949999990006
-def job():
-    logger.info("Running job...")
-    try:
-        result = get_upload_server_config("949999990006")
-        logger.info(f"Config result: {result}")
-        
-        if not result or len(result) < 2:
-            logger.error(f"Unexpected config result: {result}")
-            return
-        
-        total_response_actual_gen, total_response_actuat_weather = result
-        
-        forward_gen_data_to_EGAT(total_response_actual_gen)
-        forward_weather_data_to_EGAT(total_response_actuat_weather)
-        
-        logger.info("Job finished.")
-    except Exception as e:
-        logger.error(f"Job not pass: {e}")
-
 
 
 if __name__ == "__main__":
     try:
         total_response_actual_gen,total_response_actuat_weather = get_upload_server_config("949999990006")
         logger.info("Start forwarding.")
-        forward_gen_data_to_EGAT(total_response_actual_gen)
-        forward_weather_data_to_EGAT(total_response_actuat_weather)
+        # print(total_response_actuat_weather)
+        token = get_token_wedo(data)
+        forward_weather_data_to_WEDO(total_response_actuat_weather,token)
+        forward_gen_data_to_WEDO(total_response_actual_gen,token)
         logger.info("Job finished.")
         # logger.info("Scheduler started. Running every 15 minutes.")
     except Exception as e:
         logger.error(f"Job not pass{e}")
-    # while True:
-    #     schedule.run_pending()
-    #     time.sleep(1)
