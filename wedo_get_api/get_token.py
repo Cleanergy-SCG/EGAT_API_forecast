@@ -14,7 +14,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
+date_adjust = 3
 WEDO_BASE_ENDPOINT="https://nlp.wedolabs.net/scgdofcst/"
 headers = {
     # "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NzI1ODUzLCJpYXQiOjE3NDE1MjU4NTMsImp0aSI6IjAxNzM2MWViYjhhNDQxY2FhYTZiM2NiMTE4MzA1ZWE3IiwidXNlcl9pZCI6MTR9.7D_x66pyassRwq1yYkIv7P8C-6_V1-QNg_0_OduMkqw",  # Your token with "Bearer " prefix
@@ -54,6 +54,8 @@ key_mapping = {
 
 def make_weather_template(datetime:str,weathertype:str,point:str,status:WeatherStatus,value:float,plantcode:str):
     mapping_key = key_mapping.get(weathertype, weathertype)
+    if value == None:
+        value = 0
     raw_data =  {
         "datetime": datetime,
         "weathertype": mapping_key,
@@ -78,7 +80,7 @@ def get_upload_server_config(agg_ca):
         # Create a cursor object
         cursor = conn.cursor()
 
-        sql = """SELECT 
+        sql = f"""SELECT 
                 FORMAT(total_power.Datetime, 'dd/MM/yyyy HH:mm:ss') AS Datetime
                 --total_power.Datetime
                 , total_power_mw
@@ -101,7 +103,7 @@ def get_upload_server_config(agg_ca):
                         INNER JOIN [EDMI].[dbo].[tblDevices] dv ON mtp.[Code] = dv.[SerialNumber]
                         INNER JOIN [EDMI].[dbo].[tblsiteinfo] sif ON sif.[SiteId] = dv.[SiteId]
                         WHERE SerialNumber = 251980953
-                        AND Date_M BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
+                        AND Date_M BETWEEN DATEADD(d,-{date_adjust},GETDATE()) AND GETDATE()
                         --ORDER BY Datetime ASC
                 ) AS total_power
 
@@ -124,7 +126,7 @@ def get_upload_server_config(agg_ca):
                         --, SUM(CASE WHEN devId = '1000000051508962' THEN [wind_direction] END) AS 'wind_direction_at_hub_height_02_degree'  -- เปลี่ยนชื่อตรงจุดวัด / ไม่ได้เก็บค่า
                     FROM [scgcehuawei].[dbo].[getDevRealKpiEM]  
                     WHERE [devId] IN ('1000000034241641', '1000000051508962') 
-                        AND Datetime  BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
+                        AND Datetime  BETWEEN DATEADD(d,-{date_adjust},GETDATE()) AND GETDATE()
                         AND (SUBSTRING(CONVERT(VARCHAR,Datetime,20),15,2) = '00'
                             OR SUBSTRING(CONVERT(VARCHAR,Datetime,20),15,2) = '15'
                             OR SUBSTRING(CONVERT(VARCHAR,Datetime,20),15,2) = '30'
@@ -178,7 +180,7 @@ def get_upload_server_config(agg_ca):
         
 
 
-        sql = """WITH workingtime AS (
+        sql = f"""WITH workingtime AS (
             SELECT
                 DATEADD(MINUTE, DATEDIFF(MINUTE, 0, t0.datetime) / 15 * 15, 0) AS interval_time,
                 t3.plantCode,
@@ -190,7 +192,7 @@ def get_upload_server_config(agg_ca):
                 INNER JOIN [EDMI].[dbo].[mapProjectCode] t4 ON t4.plantCode_huawei COLLATE Thai_CI_AS = t3.plantCode COLLATE Thai_CI_AS
             WHERE
                 t0.devId != '1000000033963259'
-                AND t0.datetime BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
+                AND t0.datetime BETWEEN DATEADD(d,-{date_adjust}1,GETDATE()) AND GETDATE()
                 AND t3.plantCode = 'NE=34233551'
             GROUP BY
                 DATEADD(MINUTE, DATEDIFF(MINUTE, 0, t0.datetime) / 15 * 15, 0),
@@ -209,7 +211,7 @@ def get_upload_server_config(agg_ca):
             WHERE
                 t0.devId != '1000000033963259'
                 AND inverter_state NOT IN (512, 513, 514)
-                AND t0.datetime BETWEEN DATEADD(d,-1,GETDATE()) AND GETDATE()
+                AND t0.datetime BETWEEN DATEADD(d,-{date_adjust},GETDATE()) AND GETDATE()
                 AND t3.plantCode = 'NE=34233551'
             GROUP BY
                 DATEADD(MINUTE, DATEDIFF(MINUTE, 0, t0.datetime) / 15 * 15, 0),
@@ -339,9 +341,23 @@ if __name__ == "__main__":
     try:
         total_response_actual_gen,total_response_actuat_weather = get_upload_server_config("949999990006")
         logger.info("Start forwarding.")
-        # print(total_response_actuat_weather)
+        # print(total_response_actuat_weather[0])
+        # df = [total_response_actuat_weather[0]]
         token = get_token_wedo(data)
-        forward_weather_data_to_WEDO(total_response_actuat_weather,token)
+        # df = []
+        # index = 0
+        # print(len(total_response_actuat_weather))
+        # for ele in total_response_actuat_weather:
+        #     df.append(ele)
+        #     if index > 150 and index < 160:
+        #         # break
+        #         print(ele)
+        #     index += 1
+            
+        try:                        
+            forward_weather_data_to_WEDO(total_response_actuat_weather,token)
+        except Exception as e:
+            logger.error(f"{ele} xx {e}")
         forward_gen_data_to_WEDO(total_response_actual_gen,token)
         logger.info("Job finished.")
         # logger.info("Scheduler started. Running every 15 minutes.")

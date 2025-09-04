@@ -1,5 +1,5 @@
 [Unit]
-Description=PV Data WEDO Forwarding Scheduler
+Description=PV Data WEDO get data Scheduler
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=10min
@@ -8,8 +8,8 @@ StartLimitBurst=4           # initial start + up to 3 retries within 10 min
 [Service]
 Type=oneshot                # run-to-completion job
 User=scgce
-WorkingDirectory=/home/scgce/EGAT_API_forecast/wedo_get_api
-ExecStart=/usr/bin/python3 get_token.py
+WorkingDirectory=/home/scgce/EGAT_API_forecast/wedo_get_api/get_forecast_wedo
+ExecStart=/usr/bin/python3 wedo_get_prod_data.py
 Restart=on-failure          # retry if exit code != 0 or crash
 RestartSec=30s              # wait 30s before retry
 TimeoutStartSec=5min        # avoid hanging forever

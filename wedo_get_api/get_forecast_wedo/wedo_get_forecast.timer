@@ -1,0 +1,9 @@
+[Unit]
+Description=Run WEDO_GET_SERVICE daily at 15:00
+
+[Timer]
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
