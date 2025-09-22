@@ -53,7 +53,7 @@ def get_egat_forecast(plant, starttime, endtime, auth_token, cookie_value):
         "Content-Type": "application/json"
     }
     
-    response = requests.get(url, headers=headers, params=params)
+    response = requests.get(url, headers=headers, params=params,timeout=(5, 20))
     
     if response.status_code == 200:
         return response.json()  # Or response.text if it's not JSON
@@ -69,8 +69,8 @@ starttime = datetime.now().strftime("%Y-%m-%d 00:00")
 endtime = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d 00:00")
 # starttime = '2025-07-21'
 # endtime = '2025-07-24'
-# starttime = "2025-09-01 00:00"
-# endtime = "2025-09-05 00:00"
+starttime = "2025-09-15 00:00"
+endtime = "2025-09-19 00:00"
 auth_token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NzI1ODUzLCJpYXQiOjE3NDE1MjU4NTMsImp0aSI6IjAxNzM2MWViYjhhNDQxY2FhYTZiM2NiMTE4MzA1ZWE3IiwidXNlcl9pZCI6MTR9.7D_x66pyassRwq1yYkIv7P8C-6_V1-QNg_0_OduMkqw"  # Replace with actual token
 cookie_value = "678B2BAAE552B9CE39BE1F8E306C89DD"
 print( starttime, endtime)

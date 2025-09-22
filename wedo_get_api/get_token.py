@@ -277,7 +277,7 @@ def get_upload_server_config(agg_ca):
 def get_token_wedo(query_data):
     try:
         
-        response = requests.post(f"{WEDO_BASE_ENDPOINT}token", data=query_data)
+        response = requests.post(f"{WEDO_BASE_ENDPOINT}token", data=query_data,timeout=(5, 20))
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
         logger.info(f"API status: {response.status_code}, body preview: {str(response.text)[:200]}")
@@ -307,7 +307,7 @@ def forward_weather_data_to_WEDO(query_data,token):
     # print(headers)
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{WEDO_BASE_ENDPOINT}actualweather", json=(query_data), headers=headers)
+        response = requests.post(f"{WEDO_BASE_ENDPOINT}actualweather", json=(query_data), headers=headers,timeout=(5, 20))
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
         logger.info(f"[forward_weather_data_to_WEDO] API status: {response.status_code},")# body preview: {str(response.text)[:200]}")
@@ -325,7 +325,7 @@ def forward_gen_data_to_WEDO(query_data,token):
     }
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{WEDO_BASE_ENDPOINT}actualgen", json=(query_data), headers=headers)
+        response = requests.post(f"{WEDO_BASE_ENDPOINT}actualgen", json=(query_data), headers=headers,timeout=(5, 20))
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
         logger.info(f"[forward_gen_data_to_WEDO] API status: {response.status_code},")# body preview: {str(response.text)[:200]}")

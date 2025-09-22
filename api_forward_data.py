@@ -293,7 +293,7 @@ def forward_gen_data_to_EGAT(query_data):
     #real server
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{EGAT_BASE_URL}api/actualgen/", json=query_data, headers=headers)
+        response = requests.post(f"{EGAT_BASE_URL}api/actualgen/", json=query_data, headers=headers,timeout=(5, 20))
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
         logger.info(f"API status: {response.status_code}, body preview: {str(response.text)[:200]}")
@@ -316,7 +316,7 @@ def forward_weather_data_to_EGAT(query_data):
     #real server
     try:
         # response = requests.post(url, json=data, headers=headers)
-        response = requests.post(f"{EGAT_BASE_URL}api/actualweather/", json=query_data, headers=headers)
+        response = requests.post(f"{EGAT_BASE_URL}api/actualweather/", json=query_data, headers=headers,timeout=(5, 20))
         response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
         # logger.info(f"API response: {response.json()},{response}") # or response.text
         logger.info(f"API status: {response.status_code}, body preview: {str(response.text)[:200]}")

@@ -15,7 +15,7 @@ def get_egat_forecast(plant, starttime, endtime, auth_token, cookie_value):
         # "Cookie": f"cookiesession1={cookie_value}"
     }
     
-    response = requests.get(url, headers=headers, params=params)
+    response = requests.get(url, headers=headers, params=params,timeout=(5, 20))
     
     if response.status_code == 200:
         return response.json()  # Or response.text if it's not JSON
