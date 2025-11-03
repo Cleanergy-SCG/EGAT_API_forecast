@@ -1,0 +1,11 @@
+[Unit]
+Description=Run EGAT forward SAHA UNION DATA API every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true             # catch up once after downtime
+AccuracySec=1s              # (optional) tighter scheduling
+RandomizedDelaySec=30s      # (optional) jitter to avoid thundering herd
+
+[Install]
+WantedBy=timers.target
