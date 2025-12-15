@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 
 
-EGAT_BASE_URL = "https://faas.egat.co.th/api/qas"
+EGAT_BASE_URL = "https://faas.egat.co.th/api/qas" # dev
+EGAT_BASE_URL = "https://faas.egat.co.th/api" # PRD
 
 class WeatherStatus(Enum):
     Productive = "P"
@@ -33,10 +34,16 @@ class WeatherStatus(Enum):
     Error = "E"
     NotProvide = "NP"
 
-headers = {
+headers = { #QAS dev
     "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxODA1MzM1NjA1LCJpYXQiOjE3NjIxMzU2MDUsImp0aSI6IjI2MTBjNDNhMTJlNTRmNjQ5N2NjNGMxNmJlMDU0ZGE4IiwidXNlcl9pZCI6MTd9.n6iFkEwwYRjCXDMdzjSuCKn1FkQaUu2cjGvFFSi5MUo",  # Your token with "Bearer " prefix
     "Content-Type": "application/json"
 }
+
+# headers = { #PRD
+#     "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzg0NzI1ODUzLCJpYXQiOjE3NDE1MjU4NTMsImp0aSI6IjAxNzM2MWViYjhhNDQxY2FhYTZiM2NiMTE4MzA1ZWE3IiwidXNlcl9pZCI6MTR9.7D_x66pyassRwq1yYkIv7P8C-6_V1-QNg_0_OduMkqw",  # Your token with "Bearer " prefix
+#     "Content-Type": "application/json"
+# }
+
 
 
 conn_str = (
